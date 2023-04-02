@@ -353,22 +353,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 
 [[package]]
-name = "coredv2"
-version = "0.1.0"
-dependencies = [
- "async-graphql",
- "async-graphql-poem",
- "dotenv",
- "opendal",
- "poem",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "wasmer",
- "wasmer-wasi",
-]
-
-[[package]]
 name = "corosensei"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3439,6 +3423,22 @@ dependencies = [
  "byteorder",
  "time 0.2.27",
  "wasmer-types",
+]
+
+[[package]]
+name = "wasmos"
+version = "0.1.0"
+dependencies = [
+ "async-graphql",
+ "async-graphql-poem",
+ "dotenv",
+ "opendal",
+ "poem",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "wasmer",
+ "wasmer-wasi",
 ]
 
 [[package]]

@@ -1,15 +1,11 @@
-use std::{
-    env,
-    error::Error,
-    ops::{Index, IndexMut},
-};
+use std::{env, error::Error, ops::Index};
 
 use async_graphql::futures_util::TryStreamExt;
 use opendal::{layers::LoggingLayer, Builder, Operator};
 
 use wasmer::{
-    Cranelift, Instance, MemoryView, Module, NativeFunc, Singlepass, Store, Universal,
-    UniversalEngine, WasmPtr,
+    ChainableNamedResolver, Cranelift, ImportObject, Instance, MemoryView, Module, NativeFunc,
+    Singlepass, Store, Universal, UniversalEngine, WasmPtr,
 };
 use wasmer_wasi::{generate_import_object_from_env, WasiEnv, WasiState};
 
@@ -64,19 +60,22 @@ impl State {
 
             let module = Module::new(&store, res).map_err(|e| dbg!(e))?;
 
-            let wasi_env = WasiEnv::new(WasiState::new("sawi").build()?.into());
+            let objects = ImportObject::new();
 
-            let import_object = generate_import_object_from_env(
+            let wasi_env = WasiEnv::new(WasiState::new("wasmos").build()?.into());
+            let objects = objects.chain_front(generate_import_object_from_env(
                 &mut store,
                 wasi_env,
                 wasmer_wasi::WasiVersion::Snapshot1,
-            );
+            ));
 
-            let instance = Instance::new(&module, &import_object).map_err(|e| dbg!(e))?;
+            let instance = Instance::new(&module, &objects).map_err(|e| dbg!(e))?;
 
-            let msalloc: NativeFunc<u64, WasmPtr<u8>> = instance
+            dbg!(&instance.exports);
+
+            let str_malloc: NativeFunc<u64, WasmPtr<u8>> = instance
                 .exports
-                .get_native_function("msalloc")
+                .get_native_function("str_malloc")
                 .map_err(|e| dbg!(e))?;
 
             let f: NativeFunc<WasmPtr<u8>, WasmPtr<u8>> = instance
@@ -85,11 +84,12 @@ impl State {
                 .map_err(|e| dbg!(e))?;
 
             let memory = instance.exports.get_memory("memory")?;
+
+            let s = r#"{"method": "Mohamed dardourii"}"#.to_string();
+
+            let m = str_malloc.call(s.len() as _).map_err(|e| dbg!(e))?;
+
             let memory_view: MemoryView<u8> = memory.view();
-
-            let s = "Mohamed dardouri".to_string();
-
-            let m = msalloc.call(s.len() as _).map_err(|e| dbg!(e))?;
             for (i, c) in s.into_bytes().iter().enumerate() {
                 memory_view.index(m.offset() as usize + i).replace(*c);
             }
@@ -104,16 +104,10 @@ impl State {
                 }
                 data.push(v);
             }
-            // let data = ptr.read_until(&memory_view, |a| *a == b'\0').unwrap();
+
             let str = String::from_utf8_lossy(data.as_slice());
             println!("Memory contents: '{:?}'", str);
 
-            let s = memory_view[m.offset() as _..(m.offset() + 1000) as _]
-                .iter()
-                .map(|v| v.get())
-                .collect::<Vec<u8>>();
-
-            dbg!(String::from_utf8_lossy(s.as_slice()), ptr, m);
         }
 
         // let schema = Schema::build(

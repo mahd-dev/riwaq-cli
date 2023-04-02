@@ -1,7 +1,11 @@
 [package]
-name = "coredv2"
-version = "0.1.0"
+name = "wasmos"
+version = "0.0.1"
+description = "wasm runtime OS for web server"
+authors = ["Mohamed Dardouri <med@dardouri.com>"]
 edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/sawi-app/wasmos.git"
 
 [dependencies]
 # Runtime
@@ -23,3 +27,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # WASM
 wasmer = { version = "2.3", features = ["llvm", "cranelift", "singlepass", "universal"] }
 wasmer-wasi = "2.3"
+# wasmer-emscripten = "2.3"
