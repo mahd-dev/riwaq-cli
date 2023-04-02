@@ -27,4 +27,3 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # WASM
 wasmer = { version = "2.3", features = ["llvm", "cranelift", "singlepass", "universal"] }
 wasmer-wasi = "2.3"
-# wasmer-emscripten = "2.3"
