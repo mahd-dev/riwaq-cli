@@ -1,14 +1,16 @@
 mod api;
 mod state;
 mod wasm;
+mod helper;
 
 use std::{collections::HashMap, env, error::Error};
 
-// use async_graphql::{
-//     dynamic::{Field, FieldFuture, Object, Schema, TypeRef},
-//     Value,
-// };
+use async_graphql::{
+    dynamic::{Field, FieldFuture, Object, Schema, TypeRef},
+    Value,
+};
 use poem::{get, listener::TcpListener, post, Route, Server};
+use state::Org;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 use crate::{
@@ -36,7 +38,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // state.orgs.insert("abc".to_string(), {
     //     let query =
-    //         Object::new("Query").field(Field::new("abc", TypeRef::named_nn("String"), |_| {
+    //         Object::new("Query").field(Field::new("abcdef", TypeRef::named_nn("String"), |_| {
     //             FieldFuture::new(async { Ok(Some(Value::from(100))) })
     //         }));
 

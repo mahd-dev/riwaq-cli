@@ -1,26 +1,41 @@
-use std::{env, error::Error, ops::Index};
+use std::{
+    env,
+    error::Error,
+    ops::Index,
+    sync::{Arc, RwLock},
+};
 
-use async_graphql::futures_util::TryStreamExt;
+use async_graphql::{
+    dynamic::{Field, FieldFuture, InputObject, InputValue, Object, Schema, Subscription, TypeRef, FieldValue},
+    futures_util::{lock::Mutex, TryStreamExt},
+};
 use opendal::{layers::LoggingLayer, Builder, Operator};
 
+use serde::Deserialize;
+use serde_json::json;
 use wasmer::{
-    ChainableNamedResolver, Cranelift, ImportObject, Instance, MemoryView, Module, NativeFunc,
-    Singlepass, Store, Universal, UniversalEngine, WasmPtr,
+    ChainableNamedResolver, Cranelift, Exports, Extern, ImportObject, Instance, MemoryView, Module,
+    NativeFunc, Singlepass, Store, Universal, UniversalEngine, WasmPtr,
 };
 use wasmer_wasi::{generate_import_object_from_env, WasiEnv, WasiState};
 
-use crate::state::State;
+use crate::{
+    helper::{call_wasm, ser_params, value_to_gql_input_type, value_to_gql_output_type},
+    state::{Org, State},
+};
 
 impl State {
     pub async fn load_wasm<B>(
         &mut self,
-        _org: impl Into<String>,
+        org: impl Into<String>,
         builder: B,
     ) -> Result<(), Box<dyn Error>>
     where
         B: Builder,
     {
-        // let query = Object::new("Query");
+        let mut input_objects: Vec<InputObject> = vec![];
+        let mut output_objects: Vec<Object> = vec![];
+        let mut query = Object::new("Query");
         // let mutation = Object::new("Mutation");
         // let subscription = Subscription::new("Subscription");
 
@@ -70,61 +85,135 @@ impl State {
             ));
 
             let instance = Instance::new(&module, &objects).map_err(|e| dbg!(e))?;
-
-            dbg!(&instance.exports);
-
-            let str_malloc: NativeFunc<u64, WasmPtr<u8>> = instance
+            let handlers_metadata = instance
                 .exports
-                .get_native_function("str_malloc")
-                .map_err(|e| dbg!(e))?;
-
-            let f: NativeFunc<WasmPtr<u8>, WasmPtr<u8>> = instance
-                .exports
-                .get_native_function("f")
-                .map_err(|e| dbg!(e))?;
+                .iter()
+                .filter(|e| e.0.starts_with("wasmos_handler_metadata_"))
+                .collect::<Vec<(&String, &Extern)>>();
 
             let memory = instance.exports.get_memory("memory")?;
-
-            let s = r#"{"method": "Mohamed dardourii"}"#.to_string();
-
-            let m = str_malloc.call(s.len() as _).map_err(|e| dbg!(e))?;
-
             let memory_view: MemoryView<u8> = memory.view();
-            for (i, c) in s.into_bytes().iter().enumerate() {
-                memory_view.index(m.offset() as usize + i).replace(*c);
-            }
 
-            let ptr = f.call(m).map_err(|e| dbg!(e))?;
+            for handler_metadata in handlers_metadata {
+                if let Extern::Function(metadata_f) = handler_metadata.1 {
+                    let ptr = metadata_f.call(&[]).unwrap();
 
-            let mut data: Vec<u8> = vec![];
-            for v in memory_view[(ptr.offset() as _)..].iter() {
-                let v = v.get();
-                if v == b'\0' {
-                    break;
+                    let mut data: Vec<u8> = vec![];
+                    for v in memory_view[(ptr[0].unwrap_i32() as _)..].iter() {
+                        let v = v.get();
+                        if v == b'\0' {
+                            break;
+                        }
+                        data.push(v);
+                    }
+
+                    #[derive(Deserialize, Debug)]
+                    struct Metadata {
+                        input: serde_json::Value,
+                        output: serde_json::Value,
+                    }
+
+                    let res = String::from_utf8_lossy(data.as_slice());
+
+                    let metadata = serde_json::from_str::<Metadata>(&res).unwrap();
+
+                    let input_fields =
+                        value_to_gql_input_type("input".to_string(), metadata.input.clone())?;
+                    let output_fields = value_to_gql_output_type(
+                        "output".to_string(),
+                        json!({
+                            "container": "Obj",
+                            "content": metadata.output.clone()
+                        }),
+                    )?;
+
+                    let f_name = handler_metadata
+                        .0
+                        .strip_prefix("wasmos_handler_metadata_")
+                        .ok_or("")?
+                        .to_string();
+
+                    let instance = instance.clone();
+
+                    let mut field = Field::new(
+                        f_name.clone(),
+                        TypeRef::named_nn(output_fields.0),
+                        move |ctx| {
+
+                            let instance = instance.clone();
+                            let e = instance.exports.clone();
+                            let e2 = instance.exports.clone();
+                            let memory = e.get_memory("memory").unwrap();
+                            let memory_view: MemoryView<u8> = memory.view();
+                            let res = call_wasm(
+                                e2,
+                                memory_view,
+                                format!("wasmos_handler_{}", f_name.clone()),
+                                ser_params(ctx),
+                            );
+                            FieldFuture::new(async move {
+                                dbg!(&res, async_graphql::Value::from_json(res.clone()).unwrap());
+
+                                Ok(Some(async_graphql::Value::from_json(res).unwrap()))
+                            })
+                        },
+                    );
+                    for f in input_fields.1 {
+                        field = field.argument(f);
+                    }
+                    query = query.field(field);
+                    input_objects.extend(input_fields.2);
+                    output_objects.extend(output_fields.2);
                 }
-                data.push(v);
             }
 
-            let str = String::from_utf8_lossy(data.as_slice());
-            println!("Memory contents: '{:?}'", str);
+            // let str_malloc: NativeFunc<u64, WasmPtr<u8>> = instance
+            //     .exports
+            //     .get_native_function("str_malloc")
+            //     .map_err(|e| dbg!(e))?;
 
+            // let f: NativeFunc<WasmPtr<u8>, WasmPtr<u8>> = instance
+            //     .exports
+            //     .get_native_function("f")
+            //     .map_err(|e| dbg!(e))?;
+
+            // let s = r#"{"method": "Mohamed dardourii"}"#.to_string();
+
+            // let m = str_malloc.call(s.len() as _).map_err(|e| dbg!(e))?;
+
+            // for (i, c) in s.into_bytes().iter().enumerate() {
+            //     memory_view.index(m.offset() as usize + i).replace(*c);
+            // }
+
+            // let ptr = f.call(m).map_err(|e| dbg!(e))?;
+
+            // let mut data: Vec<u8> = vec![];
+            // for v in memory_view[(ptr.offset() as _)..].iter() {
+            //     let v = v.get();
+            //     if v == b'\0' {
+            //         break;
+            //     }
+            //     data.push(v);
+            // }
+
+            // let str = String::from_utf8_lossy(data.as_slice());
+            // println!("Memory contents: '{:?}'", str);
         }
 
-        // let schema = Schema::build(
-        //     query.type_name(),
-        //     Some(mutation.type_name()),
-        //     Some(subscription.type_name()),
-        // )
-        // .register(query)
-        // .register(mutation)
-        // .register(subscription);
+        let mut schema = Schema::build(query.type_name(), None, None).register(query);
+        for io in input_objects {
+            schema = schema.register(io);
+        }
+        for o in output_objects {
+            schema = schema.register(o);
+        }
 
-        // self.orgs.insert(
-        //     org.into(),
-        //     Org {
-        //         gql: schema.finish().map_err(|e| dbg!(e))?,
-        //     },
-        // );
+        self.orgs.insert(
+            org.into(),
+            Org {
+                gql: schema.finish().map_err(|e| dbg!(e))?,
+            },
+        );
 
         Ok(())
     }
