@@ -462,19 +462,3 @@ pub fn str_mem_read(mem: &MemoryView<u8>, ptr: impl Into<usize>) -> String {
     }
     String::from_utf8_lossy(data.as_slice()).into()
 }
-
-// pub fn value_to_fieldvalue(v: Value) -> FieldValue<'static> {
-//     match v {
-//         Value::Null => FieldValue::NULL,
-//         Value::Bool(b) => FieldValue::value(b),
-//         Value::Number(n) => n
-//             .as_f64()
-//             .map(FieldValue::value)
-//             .or(n.as_i64().map(FieldValue::value))
-//             .or(n.as_u64().map(FieldValue::value))
-//             .unwrap_or(FieldValue::value(0)),
-//         Value::String(s) => FieldValue::value(s),
-//         Value::Array(a) => FieldValue::list(a.iter().map(|i| value_to_fieldvalue(i.clone()))),
-//         Value::Object(o) => FieldValue::value(o),
-//     }
-// }
