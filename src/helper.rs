@@ -5,7 +5,7 @@ use async_graphql::dynamic::{
     ResolverContext, TypeRef, ValueAccessor,
 };
 use serde_json::{json, Map, Value};
-use wasmer::{Exports, Instance, Memory, MemoryView, NativeFunc, WasmPtr};
+use wasmer::{Exports, MemoryView, NativeFunc, WasmPtr};
 
 #[derive(Debug)]
 pub enum TypeRefKind {
@@ -390,6 +390,8 @@ fn valueaccessor_to_value(v: ValueAccessor) -> Value {
         Value::Null
     } else if let Ok(b) = v.boolean() {
         Value::Bool(b)
+    } else if let Ok(s) = v.string() {
+        Value::String(s.to_string())
     } else if let Ok(f) = v.f32() {
         serde_json::to_value(f).unwrap()
     } else if let Ok(f) = v.f64() {
@@ -398,8 +400,6 @@ fn valueaccessor_to_value(v: ValueAccessor) -> Value {
         serde_json::to_value(f).unwrap()
     } else if let Ok(f) = v.u64() {
         serde_json::to_value(f).unwrap()
-    } else if let Ok(s) = v.string() {
-        Value::String(s.to_string())
     } else if let Ok(o) = v.object() {
         objectaccessor_to_value(o)
     } else if let Ok(l) = v.list() {
@@ -421,20 +421,19 @@ pub fn ser_params(ctx: ResolverContext) -> Value {
     Value::Object(m)
 }
 
-pub fn call_wasm(exports: Exports, memory_view: MemoryView<u8>, f: String, args: Value) -> Value {
+pub fn call_wasm(
+    exports: Exports,
+    memory_view: MemoryView<u8>,
+    f: String,
+    args: Value,
+) -> Result<Value, Box<dyn Error>> {
     let str_malloc: NativeFunc<u64, WasmPtr<u8>> = exports
         .get_native_function("str_malloc")
-        .map_err(|e| dbg!(e))
-        .unwrap();
+        .map_err(|e| dbg!(e))?;
 
-    let args = serde_json::to_string(&json!({ "body": args }))
-        .map_err(|e| dbg!(e))
-        .unwrap();
-    dbg!(&args);
-    let args_p = str_malloc
-        .call(args.len() as _)
-        .map_err(|e| dbg!(e))
-        .unwrap();
+    let mut args = serde_json::to_string(&json!({ "body": args })).map_err(|e| dbg!(e))?;
+    args.push('\0');
+    let args_p = str_malloc.call(args.len() as _).map_err(|e| dbg!(e))?;
 
     for (i, c) in args.into_bytes().iter().enumerate() {
         memory_view.index(args_p.offset() as usize + i).replace(*c);
@@ -442,23 +441,26 @@ pub fn call_wasm(exports: Exports, memory_view: MemoryView<u8>, f: String, args:
 
     let f: NativeFunc<WasmPtr<u8>, WasmPtr<u8>> = exports
         .get_native_function(f.as_str())
-        .map_err(|e| dbg!(e))
-        .unwrap();
+        .map_err(|e| dbg!(e))?;
 
-    let ptr = f.call(args_p).map_err(|e| dbg!(e)).unwrap();
+    let ptr = f.call(args_p).map_err(|e| dbg!(e))?;
 
+    Ok(serde_json::from_str::<Value>(&str_mem_read(
+        &memory_view,
+        ptr.offset() as usize,
+    ))?)
+}
+
+pub fn str_mem_read(mem: &MemoryView<u8>, ptr: impl Into<usize>) -> String {
     let mut data: Vec<u8> = vec![];
-    for v in memory_view[(ptr.offset() as _)..].iter() {
+    for v in mem[ptr.into() ..].iter() {
         let v = v.get();
         if v == b'\0' {
             break;
         }
         data.push(v);
     }
-
-    let str = String::from_utf8_lossy(data.as_slice());
-
-    serde_json::from_str::<Value>(&str).unwrap()
+    String::from_utf8_lossy(data.as_slice()).into()
 }
 
 // pub fn value_to_fieldvalue(v: Value) -> FieldValue<'static> {
