@@ -17,10 +17,12 @@ pub enum TypeRefKind {
     NamedNNListNN,
 }
 
+pub type InputType = (String, Vec<InputValue>, Vec<InputObject>, TypeRefKind);
+
 pub fn value_to_gql_input_type(
     name: String,
     metadata: serde_json::Value,
-) -> Result<(String, Vec<InputValue>, Vec<InputObject>, TypeRefKind), Box<dyn Error>> {
+) -> Result<InputType, Box<dyn Error>> {
     match &metadata {
         serde_json::Value::String(t) => {
             let t = match t.as_str() {
@@ -29,7 +31,7 @@ pub fn value_to_gql_input_type(
                 | "u128" | "usize" => TypeRef::INT,
                 "f32" | "f64" => TypeRef::FLOAT,
                 "char" | "String" => TypeRef::STRING,
-                _ => return Err(format!("invalid metadata type: {}", metadata.to_string()).into()),
+                _ => return Err(format!("invalid metadata type: {}", metadata).into()),
             };
             Ok((
                 t.to_owned(),
@@ -155,32 +157,27 @@ pub fn value_to_gql_input_type(
                         }
                         Ok((
                             content.0.to_owned(),
-                            vec![InputValue::new(
-                                name.to_owned(),
-                                TypeRef::named_nn(content.0),
-                            )],
+                            vec![InputValue::new(name, TypeRef::named_nn(content.0))],
                             objects,
                             TypeRefKind::NamedNN,
                         ))
                     }
-                    _ => {
-                        return Err(
-                            format!("invalid metadata type: {}", metadata.to_string()).into()
-                        )
-                    }
+                    _ => return Err(format!("invalid metadata type: {}", metadata).into()),
                 }
             } else {
-                Err(format!("invalid metadata content").into())
+                Err("invalid metadata content".to_string().into())
             }
         }
-        e => return Err(format!("invalid metadata type: {}", e.to_string()).into()),
+        e => Err(format!("invalid metadata type: {}", e).into()),
     }
 }
+
+pub type OutputType = (String, Vec<Field>, Vec<Object>, TypeRefKind);
 
 pub fn value_to_gql_output_type(
     name: String,
     metadata: serde_json::Value,
-) -> Result<(String, Vec<Field>, Vec<Object>, TypeRefKind), Box<dyn Error>> {
+) -> Result<OutputType, Box<dyn Error>> {
     match &metadata {
         serde_json::Value::String(t) => {
             let t = match t.as_str() {
@@ -189,7 +186,7 @@ pub fn value_to_gql_output_type(
                 | "u128" | "usize" => TypeRef::INT,
                 "f32" | "f64" => TypeRef::FLOAT,
                 "char" | "String" => TypeRef::STRING,
-                _ => return Err(format!("invalid metadata type: {}", metadata.to_string()).into()),
+                _ => return Err(format!("invalid metadata type: {}", metadata).into()),
             };
             Ok((
                 t.to_owned(),
@@ -385,17 +382,13 @@ pub fn value_to_gql_output_type(
                             TypeRefKind::NamedNN,
                         ))
                     }
-                    _ => {
-                        return Err(
-                            format!("invalid metadata type: {}", metadata.to_string()).into()
-                        )
-                    }
+                    _ => return Err(format!("invalid metadata type: {}", metadata).into()),
                 }
             } else {
-                Err(format!("invalid metadata content").into())
+                Err("invalid metadata content".to_string().into())
             }
         }
-        e => return Err(format!("invalid metadata type: {}", e.to_string()).into()),
+        e => Err(format!("invalid metadata type: {}", e).into()),
     }
 }
 

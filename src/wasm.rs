@@ -42,7 +42,7 @@ impl State {
             // "llvm" => Universal::new(LLVM::new()).engine(),
             _ => Universal::new(Cranelift::new()).engine(),
         };
-        let mut store = Store::new(&compiler);
+        let store = Store::new(&compiler);
 
         let op = &Operator::new(builder)
             .unwrap()
@@ -61,7 +61,7 @@ impl State {
             .map_err(|e| e.with_context("op", "error getting next file"))
             .map_err(|e| dbg!(e))?
         {
-            let path = e.path().clone();
+            let path = e.path();
             let res = op
                 .read(path)
                 .await
@@ -72,9 +72,9 @@ impl State {
 
             let objects = ImportObject::new();
 
-            let wasi_env = WasiEnv::new(WasiState::new("wasmos").build()?.into());
+            let wasi_env = WasiEnv::new(WasiState::new("wasmos").build()?);
             let objects = objects.chain_front(generate_import_object_from_env(
-                &mut store,
+                &store,
                 wasi_env,
                 wasmer_wasi::WasiVersion::Snapshot1,
             ));
@@ -138,7 +138,7 @@ impl State {
                                 (|| {
                                     let instance = instance.clone();
                                     let e = instance.exports.clone();
-                                    let e2 = instance.exports.clone();
+                                    let e2 = instance.exports;
                                     let memory = e.get_memory("memory")?;
                                     let memory_view: MemoryView<u8> = memory.view();
                                     let res = call_wasm(
