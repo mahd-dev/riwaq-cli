@@ -194,13 +194,21 @@ pub fn value_to_gql_output_type(
             Ok((
                 t.to_owned(),
                 vec![Field::new(name.clone(), TypeRef::named_nn(t), move |ctx| {
-                    let v = match ctx.parent_value.as_value().unwrap() {
-                        async_graphql::Value::Object(o) => o.get(name.as_str()),
-                        _ => None,
-                    }
-                    .map(|cv| FieldValue::value(cv.to_owned()));
-
-                    FieldFuture::new(async move { Ok(v) })
+                    let v = (|| {
+                        Ok(match ctx
+                            .parent_value
+                            .as_value()
+                            .ok_or(async_graphql::Error::new(format!(
+                                "could not parse parent value of {}",
+                                name.to_owned()
+                            )))? {
+                            async_graphql::Value::Object(o) => o.get(name.as_str()),
+                            _ => None,
+                        }
+                        .filter(|cv| async_graphql::Value::Null != **cv)
+                        .map(|cv| FieldValue::value(cv.to_owned())))
+                    })();
+                    FieldFuture::new(async move { v })
                 })],
                 vec![],
                 TypeRefKind::NamedNN,
@@ -268,13 +276,20 @@ pub fn value_to_gql_output_type(
                         Ok((
                             content.0.to_owned(),
                             vec![Field::new(name.to_owned(), t.0, move |ctx| {
-                                let v = match ctx.parent_value.as_value().unwrap() {
-                                    async_graphql::Value::Object(o) => o.get(name.as_str()),
-                                    _ => None,
-                                }
-                                .map(|cv| FieldValue::value(cv.to_owned()));
-
-                                FieldFuture::new(async move { Ok(v) })
+                                let v = (|| {
+                                    Ok(match ctx.parent_value.as_value().ok_or(
+                                        async_graphql::Error::new(format!(
+                                            "could not parse parent value of {}",
+                                            name.to_owned()
+                                        )),
+                                    )? {
+                                        async_graphql::Value::Object(o) => o.get(name.as_str()),
+                                        _ => None,
+                                    }
+                                    .filter(|cv| async_graphql::Value::Null != **cv)
+                                    .map(|cv| FieldValue::value(cv.to_owned())))
+                                })();
+                                FieldFuture::new(async move { v })
                             })],
                             content.2,
                             t.1,
@@ -312,13 +327,20 @@ pub fn value_to_gql_output_type(
                         Ok((
                             content.0.to_owned(),
                             vec![Field::new(name.to_owned(), t.0, move |ctx| {
-                                let v = match ctx.parent_value.as_value().unwrap() {
-                                    async_graphql::Value::Object(o) => o.get(name.as_str()),
-                                    _ => None,
-                                }
-                                .map(|cv| FieldValue::value(cv.to_owned()));
-
-                                FieldFuture::new(async move { Ok(v) })
+                                let v = (|| {
+                                    Ok(match ctx.parent_value.as_value().ok_or(
+                                        async_graphql::Error::new(format!(
+                                            "could not parse parent value of {}",
+                                            name.to_owned()
+                                        )),
+                                    )? {
+                                        async_graphql::Value::Object(o) => o.get(name.as_str()),
+                                        _ => None,
+                                    }
+                                    .filter(|cv| async_graphql::Value::Null != **cv)
+                                    .map(|cv| FieldValue::value(cv.to_owned())))
+                                })();
+                                FieldFuture::new(async move { v })
                             })],
                             content.2,
                             t.1,
@@ -343,12 +365,20 @@ pub fn value_to_gql_output_type(
                                 name.to_owned(),
                                 TypeRef::named_nn(content.0),
                                 move |ctx| {
-                                    let v = match ctx.parent_value.as_value().unwrap() {
-                                        async_graphql::Value::Object(o) => o.get(name.as_str()),
-                                        _ => None,
-                                    }
-                                    .map(|cv| FieldValue::value(cv.to_owned()));
-                                    FieldFuture::new(async move { Ok(v) })
+                                    let v = (|| {
+                                        Ok(match ctx.parent_value.as_value().ok_or(
+                                            async_graphql::Error::new(format!(
+                                                "could not parse parent value of {}",
+                                                name.to_owned()
+                                            )),
+                                        )? {
+                                            async_graphql::Value::Object(o) => o.get(name.as_str()),
+                                            _ => None,
+                                        }
+                                        .filter(|cv| async_graphql::Value::Null != **cv)
+                                        .map(|cv| FieldValue::value(cv.to_owned())))
+                                    })();
+                                    FieldFuture::new(async move { v })
                                 },
                             )],
                             objects,
@@ -410,6 +440,7 @@ fn valueaccessor_to_value(v: ValueAccessor) -> Value {
 }
 
 pub fn ser_params(ctx: ResolverContext) -> Value {
+    dbg!(&ctx.field());
     let mut m = Map::new();
     let _ = ctx
         .args
@@ -453,7 +484,7 @@ pub fn call_wasm(
 
 pub fn str_mem_read(mem: &MemoryView<u8>, ptr: impl Into<usize>) -> String {
     let mut data: Vec<u8> = vec![];
-    for v in mem[ptr.into() ..].iter() {
+    for v in mem[ptr.into()..].iter() {
         let v = v.get();
         if v == b'\0' {
             break;

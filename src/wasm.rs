@@ -87,12 +87,12 @@ impl State {
                 .collect::<Vec<(&String, &Extern)>>();
 
             let memory = instance.exports.get_memory("memory")?;
-            let memory_view: MemoryView<u8> = memory.view();
 
             for handler_metadata in handlers_metadata {
                 if let Extern::Function(metadata_f) = handler_metadata.1 {
                     let ptr = metadata_f.call(&[]).unwrap();
 
+                    let memory_view: MemoryView<u8> = memory.view();
                     let mut data: Vec<u8> = vec![];
                     for v in memory_view[(ptr[0].unwrap_i32() as _)..].iter() {
                         let v = v.get();
@@ -183,33 +183,3 @@ impl State {
         Ok(())
     }
 }
-
-// impl Org {
-//     pub async fn load_wasm_module(&mut self, module: Vec<u8>) {
-//       let myobj = Object::new("MyObj")
-//             .field(Field::new("a", TypeRef::named(TypeRef::INT), |_| {
-//                 FieldFuture::new(async { Ok(Some(Value::from(123))) })
-//             }))
-//             .field(Field::new("b", TypeRef::named(TypeRef::STRING), |_| {
-//                 FieldFuture::new(async { Ok(Some(Value::from("abc"))) })
-//             }));
-
-//         let query = Object::new("Query")
-//             .field(Field::new("value", TypeRef::named(TypeRef::INT), |_| {
-//                 FieldFuture::new(async { Ok(Some(Value::from(100))) })
-//             }))
-//             .field(Field::new(
-//                 "valueObj",
-//                 TypeRef::named_nn(myobj.type_name()),
-//                 |_| FieldFuture::new(async { Ok(Some(FieldValue::NULL)) }),
-//             ));
-//         let schema = Schema::build("Query", None, None)
-//             .register(query)
-//             .register(myobj)
-//             .finish()
-//             .unwrap();
-
-//         // self.gql.
-
-//     }
-// }
