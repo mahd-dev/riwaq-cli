@@ -51,7 +51,7 @@ impl Endpoint for GraphQL {
 #[handler]
 pub async fn graphql_playground(req: &Request) -> poem::Result<Response> {
     let uri = req.uri().to_string();
-    let uri = dbg!(uri.split('/').collect::<Vec<&str>>());
+    let uri = uri.split('/').collect::<Vec<&str>>();
     let org = *uri.get(2).unwrap_or(&"");
     match org {
         "" => Ok(Html(playground_source(GraphQLPlaygroundConfig::new("/api/"))).into_response()),

@@ -9,8 +9,8 @@ use opendal::{layers::LoggingLayer, Builder, Operator};
 use serde::Deserialize;
 use serde_json::json;
 use wasmer::{
-    ChainableNamedResolver, Cranelift, Extern, ImportObject, Instance, MemoryView, Module,
-    Singlepass, Store, Universal, UniversalEngine,
+    Cranelift, Extern, ImportObject, Instance, MemoryView, Module,
+    Singlepass, Store, Universal, UniversalEngine, ChainableNamedResolver,
 };
 use wasmer_wasi::{generate_import_object_from_env, WasiEnv, WasiState};
 
@@ -50,7 +50,7 @@ impl Orgs {
             .finish();
 
         let mut modules = op
-            .list("/")
+            .scan("/")
             .await
             .map_err(|e| e.with_context("op", "error listing files"))
             .map_err(|e| dbg!(e))?;
@@ -63,6 +63,9 @@ impl Orgs {
             .map_err(|e| e.with_context("op", "error getting next file"))
             .map_err(|e| dbg!(e))?
         {
+            if e.name().starts_with(',') || !e.name().ends_with(".wasm") {
+                continue;
+            }
             let path = e.path();
             let res = op
                 .read(path)

@@ -5,7 +5,10 @@ mod wasm;
 
 use std::{collections::HashMap, env, error::Error, sync::Arc};
 
-use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Schema};
+use async_graphql::{
+    futures_util::TryStreamExt, Context, EmptyMutation, EmptySubscription, Object, Schema,
+};
+use opendal::{EntryMode, Metakey, Operator};
 use poem::{get, listener::TcpListener, post, Route, Server};
 use tokio::sync::RwLock;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
@@ -55,10 +58,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
         ),
     };
 
-    // let mut builder = opendal::services::Fs::default();
-    // builder.root("wasm");
-    // let a = state.orgs.load_wasm("abc", builder).await;
-    // let _ = dbg!(a);
+    let mut builder = opendal::services::Fs::default();
+    builder.root("wasm");
+    let op = Operator::new(builder)?.finish();
+
+    let mut ds = op.list("/").await?;
+    while let Some(de) = ds.try_next().await? {
+        let meta = op.metadata(&de, Metakey::Mode).await?;
+        if let EntryMode::DIR = meta.mode() {
+            let mut orgs = state.orgs.clone();
+            let mut builder = opendal::services::Fs::default();
+            let org = de.name().replace('/', "");
+
+            builder.root(format!("wasm/{}", org).as_str());
+            let _ = orgs.load_wasm(org, builder).await;
+        };
+    }
 
     let addr = env::var("LISTEN_ADDR").unwrap_or_else(|_| "0.0.0.0:50051".to_string());
     let app = Route::new()
