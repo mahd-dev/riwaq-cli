@@ -16,10 +16,10 @@ use wasmer_wasi::{generate_import_object_from_env, WasiEnv, WasiState};
 
 use crate::{
     helper::{call_wasm, ser_params, value_to_gql_input_type, value_to_gql_output_type},
-    state::{Org, State},
+    state::{Org, Orgs},
 };
 
-impl State {
+impl Orgs {
     pub async fn load_wasm<B>(
         &mut self,
         org: impl Into<String>,
@@ -54,6 +54,8 @@ impl State {
             .await
             .map_err(|e| e.with_context("op", "error listing files"))
             .map_err(|e| dbg!(e))?;
+
+        let mut contain_fields = false;
 
         while let Some(e) = modules
             .try_next()
@@ -161,8 +163,14 @@ impl State {
                     query = query.field(field);
                     input_objects.extend(input_fields.2);
                     output_objects.extend(output_fields.2);
+
+                    contain_fields = true;
                 }
             }
+        }
+
+        if !contain_fields {
+            return Err(format!("'{}' does not contain any object", org.into()).into());
         }
 
         let mut schema = Schema::build(query.type_name(), None, None).register(query);
@@ -173,13 +181,15 @@ impl State {
             schema = schema.register(o);
         }
 
-        self.orgs.insert(
+        let o: (String, Org) = (
             org.into(),
             Org {
                 gql: schema.finish().map_err(|e| dbg!(e))?,
             },
         );
-
+        {
+            self.orgs.write().await.insert(o.0, o.1);
+        }
         Ok(())
     }
 }
