@@ -5,7 +5,7 @@ description = "wasm runtime OS for web server"
 authors = ["Mohamed Dardouri <med@dardouri.com>"]
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/sawi-app/wasmos.git"
+repository = "https://github.com/sawi-app/wasmos-cli.git"
 
 [dependencies]
 # Runtime
