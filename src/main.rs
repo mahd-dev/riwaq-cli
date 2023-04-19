@@ -1,5 +1,5 @@
 mod api;
-mod helper;
+mod gql;
 mod state;
 mod wasm;
 
