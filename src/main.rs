@@ -1,5 +1,6 @@
 mod api;
 mod gql;
+mod mysql;
 mod state;
 mod wasm;
 
