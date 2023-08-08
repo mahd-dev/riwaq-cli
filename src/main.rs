@@ -1,6 +1,6 @@
 mod api;
 mod gql;
-mod mysql;
+mod sql;
 mod state;
 mod wasm;
 
@@ -43,8 +43,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .with(fmt::layer())
         .with(EnvFilter::from_default_env())
         .init();
-
-    pub type RootSchema = Schema<QueryRoot, EmptyMutation, EmptySubscription>;
 
     let orgs = Orgs {
         orgs: Arc::new(RwLock::new(HashMap::new())),
