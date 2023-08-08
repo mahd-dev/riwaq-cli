@@ -1,6 +1,6 @@
 use async_graphql::futures_util::StreamExt;
 use databend_driver::Value;
-use wasmos_types::sql::{TableDDL, TableDDLOp};
+use wasmos_types::sql::{DDLOp, TableDDL, TableDDLOp};
 
 use super::{
     databend::DatabendPool,
@@ -13,16 +13,15 @@ pub async fn migrate_table(ddl: &TableDDL, pool: DatabendPool) -> Result<(), Box
     let conn = pool.conn().await.unwrap();
 
     if let TableDDLOp::Drop = ddl.op {
-        let _ = dbg!(conn.exec(format!("DROP TABLE IF EXISTS {};", t_name)).await);
+        let _ = conn.exec(format!("DROP TABLE IF EXISTS {};", t_name)).await;
         return Ok(());
     } else if let TableDDLOp::DropAll = ddl.op {
-        let _ = dbg!(
-            conn.exec(format!("DROP TABLE IF EXISTS {} ALL;", t_name))
-                .await
-        );
+        let _ = conn
+            .exec(format!("DROP TABLE IF EXISTS {} ALL;", t_name))
+            .await;
         return Ok(());
     } else if let TableDDLOp::Undrop = ddl.op {
-        let _ = dbg!(conn.exec(format!("UNDROP TABLE {};", t_name)).await);
+        let _ = conn.exec(format!("UNDROP TABLE {};", t_name)).await;
     }
 
     let cols = ddl
@@ -30,35 +29,62 @@ pub async fn migrate_table(ddl: &TableDDL, pool: DatabendPool) -> Result<(), Box
         .iter()
         .map(|col| {
             format!(
-                "{} {}{}",
+                "{} {}{}{}",
                 col.name,
                 col.ty,
-                if col.opt { " NULL" } else { "" }
+                if col.opt { " NULL" } else { "" },
+                if let Some(def) = &col.default {
+                    format!(" DEFAULT {}", wasmos::sql::sql_render_value(def))
+                } else {
+                    "".to_owned()
+                }
             )
         })
         .collect::<Vec<String>>();
 
-    for col in ddl.cols.iter() {
-        let _ = dbg!(
-            conn.exec(format!(
-                "ALTER TABLE IF EXISTS {} ADD COLUMN {} {} {};",
+    for (i, col) in ddl.cols.iter().enumerate() {
+        if let DDLOp::Rename(old_name) = &col.op {
+            let _ = conn
+                .exec(format!(
+                    "ALTER TABLE IF EXISTS {} RENAME COLUMN {} {};",
+                    t_name, old_name, col.name,
+                ))
+                .await;
+        };
+        let _ = conn
+            .exec(format!(
+                "ALTER TABLE IF EXISTS {} ADD COLUMN {} {} {}{} {};",
                 t_name,
                 col.name,
                 col.ty,
-                if col.opt { "NULL" } else { "NOT NULL" }
+                if col.opt { "NULL" } else { "NOT NULL" },
+                if let Some(def) = &col.default {
+                    format!(" DEFAULT {}", wasmos::sql::sql_render_value(def))
+                } else {
+                    "".to_owned()
+                },
+                if i == 0 {
+                    "FIRST".to_string()
+                } else {
+                    format!("AFTER {}", ddl.cols.get(i - 1).unwrap().name)
+                }
             ))
-            .await
-        );
+            .await;
+        let _ = conn
+            .exec(format!(
+                "ALTER TABLE IF EXISTS {} MODIFY COLUMN {} {}{}{};",
+                t_name,
+                col.name,
+                col.ty,
+                if col.opt { " NULL" } else { "" },
+                if let Some(def) = &col.default {
+                    format!(" DEFAULT {}", wasmos::sql::sql_render_value(def))
+                } else {
+                    "".to_owned()
+                }
+            ))
+            .await.map_err(|e| dbg!(e));
     }
-
-    let _ = dbg!(
-        conn.exec(format!(
-            "ALTER TABLE IF EXISTS {} MODIFY COLUMN {};",
-            t_name,
-            cols.join(", COLUMN ")
-        ))
-        .await
-    );
 
     let tbl_exists = conn
         .conn
