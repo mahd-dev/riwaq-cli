@@ -20,7 +20,7 @@ use crate::{
     wasm::wasm_helper::str_mem_read,
 };
 
-use super::wasm_helper::{ext_sql_exec, ext_sql_query, ext_custom_sql_query, ext_custom_sql_exec};
+use super::wasm_helper::{ext_custom_sql_exec, ext_custom_sql_query, ext_sql_exec, ext_sql_query};
 
 #[derive(Clone, wasmer::WasmerEnv)]
 pub struct RiwaqEnv {
@@ -32,13 +32,10 @@ pub struct RiwaqEnv {
 }
 
 impl Orgs {
-    pub async fn load_wasm<B>(
-        &mut self,
-        org: impl Into<String>,
-        builder: B,
-    ) -> Result<(), Box<dyn Error>>
+    pub async fn load_wasm<B, S>(&mut self, org: S, builder: B) -> Result<(), Box<dyn Error>>
     where
         B: Builder,
+        S: Into<String> + Clone,
     {
         let mut gql = Gql::new();
         let mut sql = Sql::new();
@@ -123,7 +120,9 @@ impl Orgs {
                     .get_native_function("str_malloc")?
                     .to_owned(),
             );
-            let sql_module = Sql::load_ddl(instance.clone()).await.ok();
+            let sql_module = Sql::load_ddl(instance.clone(), org.clone().into())
+                .await
+                .ok();
             if let Some(SqlModule {
                 pool: Some(sql_pool),
                 ..

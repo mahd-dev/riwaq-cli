@@ -1,7 +1,7 @@
+use riwaq_types::sql::TableDDL;
 use serde::Deserialize;
 use std::error::Error;
 use wasmer::{Extern, Instance, MemoryView};
-use riwaq_types::sql::TableDDL;
 
 use crate::sql::driver::{
     databend::{Databend, DatabendConnParams},
@@ -47,41 +47,53 @@ impl Sql {
         Self { modules: vec![] }
     }
 
-    pub async fn load_db_conn(instance: Instance) -> Result<DatabendPool, Box<dyn Error>> {
-        let ptr = instance
-            .exports
-            .get_function("riwaq_settings_db_conn")?
-            .call(&[])?;
-
-        let memory = instance.exports.get_memory("memory")?;
-
-        let memory_view: MemoryView<u8> = memory.view();
-        let mut data: Vec<u8> = vec![];
-        for v in memory_view[(ptr[0].unwrap_i32() as _)..].iter() {
-            let v = v.get();
-            if v == b'\0' {
-                break;
-            }
-            data.push(v);
-        }
-
-        let res = String::from_utf8_lossy(data.as_slice());
-
+    pub async fn load_db_conn(
+        instance: Instance,
+        org: String,
+    ) -> Result<DatabendPool, Box<dyn Error>> {
         #[derive(Deserialize)]
         struct DbConn {
             url: String,
             db_name: String,
         }
 
-        let res = serde_json::from_str::<DbConn>(&res)?;
+        let db_conn = match instance.exports.get_function("riwaq_settings_db_conn") {
+            Ok(f) => {
+                let ptr = f.call(&[])?;
+
+                let memory = instance.exports.get_memory("memory")?;
+
+                let memory_view: MemoryView<u8> = memory.view();
+                let mut data: Vec<u8> = vec![];
+                for v in memory_view[(ptr[0].unwrap_i32() as _)..].iter() {
+                    let v = v.get();
+                    if v == b'\0' {
+                        break;
+                    }
+                    data.push(v);
+                }
+
+                let res = String::from_utf8_lossy(data.as_slice());
+
+                serde_json::from_str::<DbConn>(&res)?
+            }
+            Err(_) => DbConn {
+                url: std::env::var("DB_URL")?
+                    .to_string()
+                    .replace("{{org}}", &org),
+                db_name: std::env::var("DB_NAME")?
+                    .to_string()
+                    .replace("{{org}}", &org),
+            },
+        };
 
         Ok(Databend::init(DatabendConnParams::new(
-            res.url,
-            res.db_name,
+            db_conn.url,
+            db_conn.db_name,
         ))?)
     }
 
-    pub async fn load_ddl(instance: Instance) -> Result<SqlModule, Box<dyn Error>> {
+    pub async fn load_ddl(instance: Instance, org: String) -> Result<SqlModule, Box<dyn Error>> {
         let handlers_metadata = instance
             .exports
             .iter()
@@ -120,7 +132,7 @@ impl Sql {
 
         Ok(SqlModule {
             tables: tables,
-            pool: Self::load_db_conn(instance).await.ok(),
+            pool: Self::load_db_conn(instance, org).await.ok(),
         })
     }
 
