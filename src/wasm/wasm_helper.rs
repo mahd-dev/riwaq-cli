@@ -50,8 +50,7 @@ pub fn ext_sql_query(env: &WasmosEnv, ptr: WasmPtr<u8>) -> WasmPtr<u8> {
 pub fn ext_sql_exec(env: &WasmosEnv, ptr: WasmPtr<u8>) -> WasmPtr<u8> {
     let req_str = str_mem_read(&env.memory.get_ref().unwrap().view(), ptr.offset() as usize);
     let request =
-        serde_json::from_str::<wasmos::sql::Select<SQLFilter>>(Box::leak(req_str.into_boxed_str()))
-            .unwrap();
+        serde_json::from_str::<wasmos::sql::SQLRequest<SQLFilter>>(req_str.as_str()).unwrap();
 
     let res = tokio::task::block_in_place(move || {
         tokio::runtime::Handle::current().block_on(async move {
