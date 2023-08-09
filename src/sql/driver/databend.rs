@@ -19,7 +19,7 @@ impl Conn for DatabendConn {
 
     fn all(
         &self,
-        request: wasmos::sql::Select<super::model::SQLFilter>,
+        request: riwaq::sql::Select<super::model::SQLFilter>,
     ) -> BoxFuture<Result<Vec<serde_json::Value>, Box<dyn Error>>> {
         async move {
             let mut rows = self.conn.query_iter(&request.to_string()).await.unwrap();

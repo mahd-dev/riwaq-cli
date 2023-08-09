@@ -4,9 +4,9 @@ use async_graphql::futures_util::future::BoxFuture;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct SQLFilter(wasmos::sql::FilterItem);
-impl wasmos::sql::SQLFilterTrait for SQLFilter {
-    fn get_filter(&self) -> wasmos::sql::FilterItem {
+pub struct SQLFilter(riwaq::sql::FilterItem);
+impl riwaq::sql::SQLFilterTrait for SQLFilter {
+    fn get_filter(&self) -> riwaq::sql::FilterItem {
         self.0.clone()
     }
 }
@@ -17,7 +17,7 @@ pub trait Conn {
         R: ToString + Send;
     fn all(
         &self,
-        request: wasmos::sql::Select<SQLFilter>,
+        request: riwaq::sql::Select<SQLFilter>,
     ) -> BoxFuture<Result<Vec<serde_json::Value>, Box<dyn Error>>>;
 
     fn custom_query(

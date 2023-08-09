@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::error::Error;
 use wasmer::{Extern, Instance, MemoryView};
-use wasmos_types::sql::TableDDL;
+use riwaq_types::sql::TableDDL;
 
 use crate::sql::driver::{
     databend::{Databend, DatabendConnParams},
@@ -50,7 +50,7 @@ impl Sql {
     pub async fn load_db_conn(instance: Instance) -> Result<DatabendPool, Box<dyn Error>> {
         let ptr = instance
             .exports
-            .get_function("wasmos_settings_db_conn")?
+            .get_function("riwaq_settings_db_conn")?
             .call(&[])?;
 
         let memory = instance.exports.get_memory("memory")?;
@@ -85,7 +85,7 @@ impl Sql {
         let handlers_metadata = instance
             .exports
             .iter()
-            .filter(|e| e.0.starts_with("wasmos_table_ddl_"))
+            .filter(|e| e.0.starts_with("riwaq_table_ddl_"))
             .collect::<Vec<(&String, &Extern)>>();
 
         let memory = instance.exports.get_memory("memory")?;

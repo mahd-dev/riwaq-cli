@@ -23,7 +23,7 @@ use crate::{
 use super::wasm_helper::{ext_sql_exec, ext_sql_query, ext_custom_sql_query, ext_custom_sql_exec};
 
 #[derive(Clone, wasmer::WasmerEnv)]
-pub struct WasmosEnv {
+pub struct RiwaqEnv {
     #[wasmer(export)]
     pub memory: LazyInit<Memory>,
     #[wasmer(export)]
@@ -84,14 +84,14 @@ impl Orgs {
 
             let objects = ImportObject::new();
 
-            let wasi_env = WasiEnv::new(WasiState::new("wasmos").build()?);
+            let wasi_env = WasiEnv::new(WasiState::new("riwaq").build()?);
             let objects = objects.chain_front(generate_import_object_from_env(
                 &store,
                 wasi_env.clone(),
                 wasmer_wasi::WasiVersion::Snapshot1,
             ));
 
-            let mut wasmos_env = WasmosEnv {
+            let mut riwaq_env = RiwaqEnv {
                 memory: LazyInit::new(),
                 str_malloc: LazyInit::new(),
                 db_pool: Arc::new(RwLock::new(None)),
@@ -99,25 +99,25 @@ impl Orgs {
 
             let objects = objects.chain_front(imports! {
                 "env" => {
-                    "wasmos_dbg" => Function::new_native_with_env(&store, wasmos_env.clone(), |env: &WasmosEnv, ptr: WasmPtr<u8>| {
+                    "riwaq_dbg" => Function::new_native_with_env(&store, riwaq_env.clone(), |env: &RiwaqEnv, ptr: WasmPtr<u8>| {
                         println!(
                             "{}",
                             str_mem_read(&env.memory.get_ref().unwrap().view(), ptr.offset() as usize)
                         );
                     }),
-                    "ext_sql_exec" => Function::new_native_with_env(&store, wasmos_env.clone(), ext_sql_exec),
-                    "ext_sql_query" => Function::new_native_with_env(&store, wasmos_env.clone(), ext_sql_query),
-                    "ext_custom_sql_exec" => Function::new_native_with_env(&store, wasmos_env.clone(), ext_custom_sql_exec),
-                    "ext_custom_sql_query" => Function::new_native_with_env(&store, wasmos_env.clone(), ext_custom_sql_query)
+                    "ext_sql_exec" => Function::new_native_with_env(&store, riwaq_env.clone(), ext_sql_exec),
+                    "ext_sql_query" => Function::new_native_with_env(&store, riwaq_env.clone(), ext_sql_query),
+                    "ext_custom_sql_exec" => Function::new_native_with_env(&store, riwaq_env.clone(), ext_custom_sql_exec),
+                    "ext_custom_sql_query" => Function::new_native_with_env(&store, riwaq_env.clone(), ext_custom_sql_query)
                 }
             });
 
             let instance = Instance::new(&module, &objects).map_err(|e| dbg!(e))?;
 
-            wasmos_env
+            riwaq_env
                 .memory
                 .initialize(instance.exports.get_memory("memory")?.to_owned());
-            wasmos_env.str_malloc.initialize(
+            riwaq_env.str_malloc.initialize(
                 instance
                     .exports
                     .get_native_function("str_malloc")?
@@ -129,7 +129,7 @@ impl Orgs {
                 ..
             }) = &sql_module
             {
-                let mut a = wasmos_env.db_pool.write().await;
+                let mut a = riwaq_env.db_pool.write().await;
                 *a = Some(sql_pool.clone());
             };
             if let Some(qm) = sql_module {

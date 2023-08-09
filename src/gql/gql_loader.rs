@@ -35,7 +35,7 @@ impl Gql {
         let handlers_metadata = instance
             .exports
             .iter()
-            .filter(|e| e.0.starts_with("wasmos_handler_metadata_"))
+            .filter(|e| e.0.starts_with("riwaq_handler_metadata_"))
             .collect::<Vec<(&String, &Extern)>>();
 
         let memory = instance.exports.get_memory("memory")?;
@@ -76,7 +76,7 @@ impl Gql {
 
                 let f_name = handler_metadata
                     .0
-                    .strip_prefix("wasmos_handler_metadata_")
+                    .strip_prefix("riwaq_handler_metadata_")
                     .ok_or("")?
                     .to_string();
 
@@ -96,7 +96,7 @@ impl Gql {
                                 let res = call_wasm(
                                     e2,
                                     memory_view,
-                                    format!("wasmos_handler_{}", f_name.clone()),
+                                    format!("riwaq_handler_{}", f_name.clone()),
                                     ser_params(ctx),
                                 )
                                 .map_err(|e| {

@@ -5,12 +5,12 @@ use wasmer::{Exports, MemoryView, NativeFunc, WasmPtr};
 
 use crate::sql::driver::model::{Conn, Pool, SQLFilter};
 
-use super::wasm_loader::WasmosEnv;
+use super::wasm_loader::RiwaqEnv;
 
-pub fn ext_sql_query(env: &WasmosEnv, ptr: WasmPtr<u8>) -> WasmPtr<u8> {
+pub fn ext_sql_query(env: &RiwaqEnv, ptr: WasmPtr<u8>) -> WasmPtr<u8> {
     let req_str = str_mem_read(&env.memory.get_ref().unwrap().view(), ptr.offset() as usize);
     let request =
-        serde_json::from_str::<wasmos::sql::Select<SQLFilter>>(Box::leak(req_str.into_boxed_str()))
+        serde_json::from_str::<riwaq::sql::Select<SQLFilter>>(Box::leak(req_str.into_boxed_str()))
             .unwrap();
 
     let pool = env.db_pool.to_owned();
@@ -47,10 +47,10 @@ pub fn ext_sql_query(env: &WasmosEnv, ptr: WasmPtr<u8>) -> WasmPtr<u8> {
     p
 }
 
-pub fn ext_sql_exec(env: &WasmosEnv, ptr: WasmPtr<u8>) -> WasmPtr<u8> {
+pub fn ext_sql_exec(env: &RiwaqEnv, ptr: WasmPtr<u8>) -> WasmPtr<u8> {
     let req_str = str_mem_read(&env.memory.get_ref().unwrap().view(), ptr.offset() as usize);
     let request =
-        serde_json::from_str::<wasmos::sql::SQLRequest<SQLFilter>>(req_str.as_str()).unwrap();
+        serde_json::from_str::<riwaq::sql::SQLRequest<SQLFilter>>(req_str.as_str()).unwrap();
 
     let res = tokio::task::block_in_place(move || {
         tokio::runtime::Handle::current().block_on(async move {
@@ -86,7 +86,7 @@ pub fn ext_sql_exec(env: &WasmosEnv, ptr: WasmPtr<u8>) -> WasmPtr<u8> {
     p
 }
 
-pub fn ext_custom_sql_query(env: &WasmosEnv, ptr: WasmPtr<u8>) -> WasmPtr<u8> {
+pub fn ext_custom_sql_query(env: &RiwaqEnv, ptr: WasmPtr<u8>) -> WasmPtr<u8> {
     let req_str = str_mem_read(&env.memory.get_ref().unwrap().view(), ptr.offset() as usize);
     let request = Box::leak(req_str.into_boxed_str());
 
@@ -124,7 +124,7 @@ pub fn ext_custom_sql_query(env: &WasmosEnv, ptr: WasmPtr<u8>) -> WasmPtr<u8> {
     p
 }
 
-pub fn ext_custom_sql_exec(env: &WasmosEnv, ptr: WasmPtr<u8>) -> WasmPtr<u8> {
+pub fn ext_custom_sql_exec(env: &RiwaqEnv, ptr: WasmPtr<u8>) -> WasmPtr<u8> {
     let req_str = str_mem_read(&env.memory.get_ref().unwrap().view(), ptr.offset() as usize);
     let request = req_str.as_str();
 

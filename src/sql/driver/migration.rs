@@ -1,6 +1,6 @@
 use async_graphql::futures_util::StreamExt;
 use databend_driver::Value;
-use wasmos_types::sql::{DDLOp, TableDDL, TableDDLOp};
+use riwaq_types::sql::{DDLOp, TableDDL, TableDDLOp};
 
 use super::{
     databend::DatabendPool,
@@ -34,7 +34,7 @@ pub async fn migrate_table(ddl: &TableDDL, pool: DatabendPool) -> Result<(), Box
                 col.ty,
                 if col.opt { " NULL" } else { "" },
                 if let Some(def) = &col.default {
-                    format!(" DEFAULT {}", wasmos::sql::sql_render_value(def))
+                    format!(" DEFAULT {}", riwaq::sql::sql_render_value(def))
                 } else {
                     "".to_owned()
                 }
@@ -59,7 +59,7 @@ pub async fn migrate_table(ddl: &TableDDL, pool: DatabendPool) -> Result<(), Box
                 col.ty,
                 if col.opt { "NULL" } else { "NOT NULL" },
                 if let Some(def) = &col.default {
-                    format!(" DEFAULT {}", wasmos::sql::sql_render_value(def))
+                    format!(" DEFAULT {}", riwaq::sql::sql_render_value(def))
                 } else {
                     "".to_owned()
                 },
@@ -78,7 +78,7 @@ pub async fn migrate_table(ddl: &TableDDL, pool: DatabendPool) -> Result<(), Box
                 col.ty,
                 if col.opt { " NULL" } else { "" },
                 if let Some(def) = &col.default {
-                    format!(" DEFAULT {}", wasmos::sql::sql_render_value(def))
+                    format!(" DEFAULT {}", riwaq::sql::sql_render_value(def))
                 } else {
                     "".to_owned()
                 }

@@ -2658,6 +2658,60 @@ dependencies = [
 ]
 
 [[package]]
+name = "riwaq"
+version = "0.0.2"
+dependencies = [
+ "async-graphql",
+ "async-graphql-poem",
+ "chrono",
+ "databend-driver",
+ "dotenv",
+ "opendal",
+ "poem",
+ "riwaq 0.1.0",
+ "riwaq-types",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "wasmer",
+ "wasmer-wasi",
+]
+
+[[package]]
+name = "riwaq"
+version = "0.1.0"
+dependencies = [
+ "riwaq-macro",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "riwaq-macro"
+version = "0.0.1"
+dependencies = [
+ "convert_case",
+ "field_types",
+ "proc-macro2 1.0.66",
+ "quote 1.0.32",
+ "riwaq-types",
+ "serde",
+ "serde_json",
+ "syn 2.0.28",
+]
+
+[[package]]
+name = "riwaq-types"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "rkyv"
 version = "0.7.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4128,60 +4182,6 @@ dependencies = [
  "byteorder",
  "time 0.2.27",
  "wasmer-types",
-]
-
-[[package]]
-name = "wasmos"
-version = "0.0.2"
-dependencies = [
- "async-graphql",
- "async-graphql-poem",
- "chrono",
- "databend-driver",
- "dotenv",
- "opendal",
- "poem",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "wasmer",
- "wasmer-wasi",
- "wasmos 0.1.0",
- "wasmos-types",
-]
-
-[[package]]
-name = "wasmos"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "tokio",
- "wasmos-macro",
-]
-
-[[package]]
-name = "wasmos-macro"
-version = "0.0.1"
-dependencies = [
- "convert_case",
- "field_types",
- "proc-macro2 1.0.66",
- "quote 1.0.32",
- "serde",
- "serde_json",
- "syn 2.0.28",
- "wasmos-types",
-]
-
-[[package]]
-name = "wasmos-types"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
 ]
 
 [[package]]
