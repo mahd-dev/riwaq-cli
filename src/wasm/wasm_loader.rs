@@ -20,7 +20,7 @@ use crate::{
     wasm::wasm_helper::str_mem_read,
 };
 
-use super::wasm_helper::{ext_sql_exec, ext_sql_query};
+use super::wasm_helper::{ext_sql_exec, ext_sql_query, ext_custom_sql_query, ext_custom_sql_exec};
 
 #[derive(Clone, wasmer::WasmerEnv)]
 pub struct WasmosEnv {
@@ -106,7 +106,9 @@ impl Orgs {
                         );
                     }),
                     "ext_sql_exec" => Function::new_native_with_env(&store, wasmos_env.clone(), ext_sql_exec),
-                    "ext_sql_query" => Function::new_native_with_env(&store, wasmos_env.clone(), ext_sql_query)
+                    "ext_sql_query" => Function::new_native_with_env(&store, wasmos_env.clone(), ext_sql_query),
+                    "ext_custom_sql_exec" => Function::new_native_with_env(&store, wasmos_env.clone(), ext_custom_sql_exec),
+                    "ext_custom_sql_query" => Function::new_native_with_env(&store, wasmos_env.clone(), ext_custom_sql_query)
                 }
             });
 
@@ -145,7 +147,7 @@ impl Orgs {
         );
 
         sql.migrate().await?;
-        
+
         // let ex_pool;
         // {
         //     ex_pool = self

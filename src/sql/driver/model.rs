@@ -19,6 +19,11 @@ pub trait Conn {
         &self,
         request: wasmos::sql::Select<SQLFilter>,
     ) -> BoxFuture<Result<Vec<serde_json::Value>, Box<dyn Error>>>;
+
+    fn custom_query(
+        &self,
+        request: String,
+    ) -> BoxFuture<Result<Vec<Vec<serde_json::Value>>, Box<dyn Error>>>;
 }
 
 pub trait ConnParams {}

@@ -39,6 +39,30 @@ impl Conn for DatabendConn {
         }
         .boxed()
     }
+
+    fn custom_query(
+        &self,
+        request: String,
+    ) -> BoxFuture<Result<Vec<Vec<serde_json::Value>>, Box<dyn Error>>> {
+        async move {
+            let mut rows = self.conn.query_iter(&request).await.unwrap();
+            let mut res = vec![];
+            while let Some(row) = rows.next().await {
+                let row = match row {
+                    Ok(r) => r,
+                    Err(_) => continue,
+                };
+                res.push(
+                    row.values()
+                        .into_iter()
+                        .map(|v| databend_to_serde(v.to_owned()))
+                        .collect(),
+                );
+            }
+            Ok(res)
+        }
+        .boxed()
+    }
 }
 
 pub struct DatabendConnParams {
