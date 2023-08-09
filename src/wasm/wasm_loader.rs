@@ -144,7 +144,8 @@ impl Orgs {
             },
         );
 
-        let _m = dbg!(sql.migrate().await)?;
+        sql.migrate().await?;
+        
         // let ex_pool;
         // {
         //     ex_pool = self

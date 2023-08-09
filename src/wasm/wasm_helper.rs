@@ -74,7 +74,7 @@ pub fn ext_sql_exec(env: &WasmosEnv, ptr: WasmPtr<u8>) -> WasmPtr<u8> {
             }))
             .unwrap()
         });
-    dbg!(&s);
+        
     let p = env
         .str_malloc
         .get_ref()
