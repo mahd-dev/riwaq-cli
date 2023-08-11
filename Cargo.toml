@@ -1,5 +1,5 @@
 [package]
-name = "riwaq"
+name = "riwaq-cli"
 version = "0.1.0"
 description = "wasm runtime OS for web server"
 authors = ["Mohamed Dardouri <med@dardouri.com>"]
