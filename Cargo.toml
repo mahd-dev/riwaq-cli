@@ -11,6 +11,9 @@ repository = "https://github.com/sawi-app/riwaq-cli.git"
 # Runtime
 dotenv = "0.15"
 tokio = {version ="1", features = ["rt-multi-thread"] }
+clap = { version = "4.3", features = ["derive"] }
+notify-debouncer-full = "0.2.0"
+toml = "0.7"
 
 # Public API
 async-graphql = { version = "5.0", features = ["dynamic-schema"] }

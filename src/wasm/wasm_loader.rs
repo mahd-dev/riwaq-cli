@@ -1,8 +1,6 @@
 use std::{env, error::Error, sync::Arc};
 
 use async_graphql::futures_util::TryStreamExt;
-use opendal::{layers::LoggingLayer, Builder, Operator};
-
 use tokio::sync::RwLock;
 use wasmer::{
     imports, ChainableNamedResolver, Cranelift, Function, ImportObject, Instance, LazyInit, Memory,
@@ -12,11 +10,12 @@ use wasmer_wasi::{generate_import_object_from_env, WasiEnv, WasiState};
 
 use crate::{
     gql::gql_loader::Gql,
+    server::init_operator,
     sql::{
         driver::databend::DatabendPool,
         sql_loader::{Sql, SqlModule},
     },
-    state::{Org, Orgs},
+    state::{Org, Orgs, StorageConfig, StorageOrgBy},
     wasm::wasm_helper::str_mem_read,
 };
 
@@ -32,9 +31,12 @@ pub struct RiwaqEnv {
 }
 
 impl Orgs {
-    pub async fn load_wasm<B, S>(&mut self, org: S, builder: B) -> Result<(), Box<dyn Error>>
+    pub async fn load_wasm<S>(
+        &mut self,
+        org: S,
+        storage: Arc<StorageConfig>,
+    ) -> Result<(), Box<dyn Error>>
     where
-        B: Builder,
         S: Into<String> + Clone,
     {
         let mut gql = Gql::new();
@@ -50,10 +52,16 @@ impl Orgs {
         };
         let store = Store::new(&compiler);
 
-        let op = &Operator::new(builder)
-            .unwrap()
-            .layer(LoggingLayer::default())
-            .finish();
+        let mut storage = (*storage).clone();
+        match storage.org_by {
+            StorageOrgBy::Dir => storage
+                .opt
+                .get_mut("root")
+                .map(|v| *v = format!("{v}/{org}", org = org.clone().into())),
+            StorageOrgBy::Bucket => storage.opt.get_mut("bucket").map(|v| *v = org.clone().into()),
+        };
+
+        let op = init_operator(Arc::new(storage.clone()))?;
 
         let mut modules = op
             .scan("/")
