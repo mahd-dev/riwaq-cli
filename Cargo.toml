@@ -1,11 +1,11 @@
 [package]
 name = "riwaq"
-version = "0.0.2"
+version = "0.1.0"
 description = "wasm runtime OS for web server"
 authors = ["Mohamed Dardouri <med@dardouri.com>"]
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/sawi-app/riwaq-cli.git"
+repository = "https://github.com/mahd-dev/riwaq-cli.git"
 
 [dependencies]
 # Runtime
@@ -38,5 +38,5 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 chrono = "0.4"
 
-riwaq = { path = "../riwaq" }
-riwaq-types = { path = "../riwaq/types" }
+riwaq = "0.1.0"
+riwaq-types = "0.1.0"
