@@ -58,7 +58,10 @@ impl Orgs {
                 .opt
                 .get_mut("root")
                 .map(|v| *v = format!("{v}/{org}", org = org.clone().into())),
-            StorageOrgBy::Bucket => storage.opt.get_mut("bucket").map(|v| *v = org.clone().into()),
+            StorageOrgBy::Bucket => storage
+                .opt
+                .get_mut("bucket")
+                .map(|v| *v = org.clone().into()),
         };
 
         let op = init_operator(Arc::new(storage.clone()))?;
@@ -147,13 +150,13 @@ impl Orgs {
         }
 
         let o: (String, Org) = (
-            org.into(),
+            org.clone().into(),
             Org {
                 gql: gql.build_schema().map_err(|e| dbg!(e))?,
             },
         );
 
-        sql.migrate().await?;
+        sql.migrate(org.clone()).await?;
 
         // let ex_pool;
         // {

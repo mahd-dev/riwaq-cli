@@ -67,11 +67,10 @@ impl Conn for DatabendConn {
 
 pub struct DatabendConnParams {
     conn_str: String,
-    db_name: String,
 }
 impl DatabendConnParams {
-    pub fn new(conn_str: String, db_name: String) -> Self {
-        Self { conn_str, db_name }
+    pub fn new(conn_str: String) -> Self {
+        Self { conn_str }
     }
 }
 
@@ -80,7 +79,6 @@ impl ConnParams for DatabendConnParams {}
 #[derive(Clone, Debug)]
 pub struct DatabendPool {
     pub conn_str: String,
-    pub db_name: String,
 }
 
 impl Pool for DatabendPool {
@@ -112,8 +110,7 @@ impl DB for Databend {
 
     fn init(params: DatabendConnParams) -> Result<DatabendPool, Box<dyn Error>> {
         Ok(DatabendPool {
-            conn_str: params.conn_str,
-            db_name: params.db_name,
+            conn_str: params.conn_str
         })
     }
 }

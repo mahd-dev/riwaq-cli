@@ -8,8 +8,11 @@ use super::{
 };
 use std::error::Error;
 
-pub async fn migrate_table(ddl: &TableDDL, pool: DatabendPool) -> Result<(), Box<dyn Error>> {
-    let t_name = format!("{}.{}", pool.db_name, ddl.name);
+pub async fn migrate_table<S>(ddl: &TableDDL, pool: DatabendPool, org: S) -> Result<(), Box<dyn Error>> 
+where
+    S: Into<String> + Clone,
+{
+    let t_name = format!("{}.{}", org.into(), ddl.name);
     let conn = pool.conn().await.unwrap();
 
     if let TableDDLOp::Drop = ddl.op {

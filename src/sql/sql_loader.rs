@@ -21,16 +21,22 @@ pub struct SqlModule {
 }
 
 impl SqlModule {
-    pub async fn migrate(&self) -> Result<(), Box<dyn Error>> {
+    pub async fn migrate<S>(&self, org: S) -> Result<(), Box<dyn Error>>
+    where
+        S: Into<String> + Clone,
+    {
         let pool = self.pool.clone().ok_or("migration: no database pool")?;
         let conn = pool.conn().await?;
 
         let _ = conn
-            .exec(format!("CREATE DATABASE IF NOT EXISTS {};", pool.db_name))
+            .exec(format!(
+                "CREATE DATABASE IF NOT EXISTS {};",
+                org.clone().into()
+            ))
             .await;
 
         for t in &self.tables {
-            migrate_table(t, pool.clone()).await?;
+            migrate_table(t, pool.clone(), org.clone()).await?;
         }
 
         Ok(())
@@ -54,7 +60,6 @@ impl Sql {
         #[derive(Deserialize)]
         struct DbConn {
             url: String,
-            db_name: String,
         }
 
         let db_conn = match instance.exports.get_function("riwaq_settings_db_conn") {
@@ -81,16 +86,10 @@ impl Sql {
                 url: std::env::var("DB_URL")?
                     .to_string()
                     .replace("{{org}}", &org),
-                db_name: std::env::var("DB_NAME")?
-                    .to_string()
-                    .replace("{{org}}", &org),
             },
         };
 
-        Ok(Databend::init(DatabendConnParams::new(
-            db_conn.url,
-            db_conn.db_name,
-        ))?)
+        Ok(Databend::init(DatabendConnParams::new(db_conn.url))?)
     }
 
     pub async fn load_ddl(instance: Instance, org: String) -> Result<SqlModule, Box<dyn Error>> {
@@ -136,9 +135,12 @@ impl Sql {
         })
     }
 
-    pub async fn migrate(self) -> Result<(), Box<dyn Error>> {
+    pub async fn migrate<S>(self, org: S) -> Result<(), Box<dyn Error>>
+    where
+        S: Into<String> + Clone,
+    {
         for m in self.modules {
-            m.migrate().await?
+            m.migrate(org.clone()).await?
         }
         Ok(())
     }
