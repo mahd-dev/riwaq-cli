@@ -2927,7 +2927,19 @@ dependencies = [
 
 [[package]]
 name = "riwaq"
-version = "0.0.2"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad011da303d622c53b484c12e59f9cedd565174fb0dd68fa50a746dc78b7eb57"
+dependencies = [
+ "riwaq-macro",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "riwaq-cli"
+version = "0.1.1"
 dependencies = [
  "async-graphql",
  "async-graphql-poem",
@@ -2938,7 +2950,7 @@ dependencies = [
  "notify-debouncer-full",
  "opendal",
  "poem",
- "riwaq 0.1.0",
+ "riwaq",
  "riwaq-types",
  "serde",
  "serde_json",
@@ -2951,18 +2963,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "riwaq"
-version = "0.1.0"
-dependencies = [
- "riwaq-macro",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "riwaq-macro"
-version = "0.0.1"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20fb36aa87a066719cb08f90dd1d87aded10298629e20cc42291b27489a22404"
 dependencies = [
  "convert_case",
  "field_types",
@@ -2977,6 +2981,8 @@ dependencies = [
 [[package]]
 name = "riwaq-types"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0047678c30eb35ee1bde44eff8f34cb7a1dfb54bed67b1700fb1c1bb0569fec6"
 dependencies = [
  "serde",
  "serde_json",
